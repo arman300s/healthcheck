@@ -77,4 +77,14 @@ interface HealthEntity
      * Default Mail server port
      */
     public const DEFAULT_MAIL_PORT = 25;
+
+	/**
+	 * Default Graylog port
+	 */
+	public const DEFAULT_GRAYLOG_PORT = 12201;
+
+	/**
+	 * Default Graylog channel
+	 */
+	public const DEFAULT_GRAYLOG_CHANNEL = 'gelf';
 }

@@ -39,6 +39,7 @@ return [
         'mail'        => Adata\HealthChecker\Checkers\MailChecker::class,
         'clickhouse'  => Adata\HealthChecker\Checkers\ClickHouseChecker::class,
         'nca_node'    => Adata\HealthChecker\Checkers\NCANodeChecker::class,
+		'graylog'     => Adata\HealthChecker\Checkers\GraylogChecker::class,
     ],
 
     // Routing settings
@@ -112,6 +113,13 @@ return [
     // |      (string) url             - URL health check (URL where health check is available)                        |
     // |      (int) timeout            - Connection timeout (Default: 3)                                               |
     // |---------------------------------------------------------------------------------------------------------------|
+	// | 12. graylog                   - Graylog server check                                                          |
+	// |      (string) host            - Server host graylog                                                           |
+	// |      (string|null) port       - Connection port (Default: 12201)                                              |
+	// |      (bool) channel           - Log channel                                                                   |
+	// |      (string) source          - Graylog source                                                                |
+	// |      (int) timeout            - Connection timeout (Default: 3)                                               |
+	// |---------------------------------------------------------------------------------------------------------------|
     'services' => [
         'db'          => [
             'type'        => 'database',
@@ -179,5 +187,13 @@ return [
            'url'     => 'https://example.com',
            'timeout' => 2,
         ],
+		'graylog'     => [
+			'type'    => 'graylog',
+			'host'    => '127.0.0.1',
+			'port'    => 12201,
+			'channel' => 'gelf',
+			'source'  => 'example',
+			'timeout' => 3,
+		]
     ],
 ];
