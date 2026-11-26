@@ -5,6 +5,7 @@ namespace Adata\HealthChecker\Tests\Unit;
 use Adata\HealthChecker\Checkers\GraylogChecker;
 use Adata\HealthChecker\Entities\HealthEntity;
 use Adata\HealthChecker\Tests\TestCase;
+use GuzzleHttp\Client;
 use GuzzleHttp\Psr7\Response;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Log;
@@ -60,6 +61,29 @@ class GraylogCheckerTest extends TestCase
 		$this->assertEquals($expectedHealthStatus, $status);
 	}
 
+	/**
+	 * @covers GraylogChecker::check
+	 */
+	public function testHttpsProtocol()
+	{
+		$guzzleClientMock = $this->createMock(Client::class);
+		$guzzleClientMock
+			->expects($this->once())
+			->method('get')
+			->with('https://127.0.0.1:443/api/system/lbstatus', ['timeout' => 3])
+			->willReturn(new Response(StatusCode::HTTP_OK, [], 'ALIVE'));
+
+		$graylog = new GraylogChecker($guzzleClientMock, [
+			'type'    => 'graylog',
+			'host'    => '127.0.0.1',
+			'port'    => 443,
+			'https'   => true,
+			'channel' => 'gelf',
+		]);
+
+		$this->assertEquals(HealthEntity::STATUS_SUCCESSFUL, $graylog->check());
+	}
+
 	public function getData(): array
 	{
 		return [
@@ -106,6 +130,21 @@ class GraylogCheckerTest extends TestCase
 				'graylog_response'       => [
 					'status_code' => StatusCode::HTTP_OK,
 					'body'        => 'DEAD',
+				],
+			],
+			[
+				'expected_health_status' => HealthEntity::STATUS_FAIL,
+				'config'                 => [
+					'type'    => 'graylog',
+					'host'    => '127.0.0.1',
+					'port'    => 12201,
+					'channel' => 'gelf',
+					'source'  => 'example',
+					'timeout' => 3,
+				],
+				'graylog_response'       => [
+					'status_code' => StatusCode::HTTP_SERVICE_UNAVAILABLE,
+					'body'        => 'ALIVE',
 				],
 			],
 			[

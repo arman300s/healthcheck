@@ -4,14 +4,19 @@ namespace Adata\HealthChecker\Checkers;
 
 use Adata\HealthChecker\Entities\HealthEntity;
 use GuzzleHttp\Client;
-use GuzzleHttp\Exception\GuzzleException;
 use Illuminate\Support\Facades\Config;
-use Symfony\Component\HttpFoundation\Response;
 use Illuminate\Support\Facades\Log;
-use Adata\HealthChecker\Tests\Unit\HttpCheckerTest;
+use Symfony\Component\HttpFoundation\Response;
 
+/**
+ * GraylogChecker class
+ *
+ * type = graylog
+ * @uses \Adata\HealthChecker\Tests\Unit\GraylogCheckerTest
+ */
 class GraylogChecker implements CheckerInterface, HealthEntity
 {
+    /** @var Client */
     private $guzzleClient;
 
     /** @var array */
@@ -25,54 +30,62 @@ class GraylogChecker implements CheckerInterface, HealthEntity
 
     /**
      * @inheritdoc
-     * @uses HttpCheckerTest::test()
+     * @uses \Adata\HealthChecker\Tests\Unit\GraylogCheckerTest::test()
      */
     public function check(): string
     {
-		$status = self::STATUS_SUCCESSFUL;
+        $status = self::STATUS_SUCCESSFUL;
 
-		try {
-			$timeout = self::DEFAULT_TIMEOUT;
-			$port    = self::DEFAULT_GRAYLOG_PORT;
+        try {
+            $protocol = self::DEFAULT_PROTOCOL;
+            $timeout  = self::DEFAULT_TIMEOUT;
+            $port     = self::DEFAULT_GRAYLOG_PORT;
 
-			if (isset($this->config['timeout']) && !empty($this->config['timeout'])) {
-				$timeout = $this->config['timeout'];
-			}
+            if (isset($this->config['https']) && $this->config['https']) {
+                $protocol = 'https';
+            }
 
-			if (isset($this->config['port']) && !empty($this->config['port'])) {
-				$port = $this->config['port'];
-			}
+            if (isset($this->config['timeout']) && !empty($this->config['timeout'])) {
+                $timeout = $this->config['timeout'];
+            }
 
-			$channel = $this->config['channel'] ?? 'gelf';
-			$loggingChannels = Config::get('logging.channels', []);
+            if (isset($this->config['port']) && !empty($this->config['port'])) {
+                $port = $this->config['port'];
+            }
 
-			if (!isset($loggingChannels[$channel])) {
-				Log::warning('HEALTHCHECK: GraylogChecker - GELF channel not found in logging config', [
-					'channel' => $channel
-				]);
-				return self::STATUS_FAIL;
-			}
+            $channel         = $this->config['channel'] ?? self::DEFAULT_GRAYLOG_CHANNEL;
+            $loggingChannels = Config::get('logging.channels', []);
 
-			$url = sprintf('http://%s:%s/api/system/lbstatus', $this->config['host'], $port);
-			$request = $this->guzzleClient->get($url, ['timeout' => $timeout]);
-			$response = $request->getBody()->getContents();
+            if (!isset($loggingChannels[$channel])) {
+                Log::warning('HEALTHCHECK: GraylogChecker - GELF channel not found in logging config', [
+                    'channel' => $channel,
+                ]);
 
-			if (stripos($response, 'ALIVE') === false) {
-				$status = self::STATUS_FAIL;
-			}
+                return self::STATUS_FAIL;
+            }
 
-			if ($status === self::STATUS_SUCCESSFUL) {
-				Log::channel($channel)->info('Health check test message', [
-					'health_check' => true,
-					'source' => $this->config['source'] ?? 'health-checker'
-				]);
-			}
+            $url      = sprintf('%s://%s:%s/api/system/lbstatus',
+                $protocol,
+                $this->config['host'],
+                $port,
+            );
+            $response = $this->guzzleClient->get($url, ['timeout' => $timeout]);
 
-		} catch (\Exception $e) {
-			Log::warning('HEALTHCHECK: GraylogChecker have catch', ['error' => $e->getMessage()]);
-			$status = self::STATUS_FAIL;
-		}
+            if ($response->getStatusCode() !== Response::HTTP_OK
+                || stripos($response->getBody()->getContents(), 'ALIVE') === false
+            ) {
+                return self::STATUS_FAIL;
+            }
 
-		return $status;
+            Log::channel($channel)->info('Health check test message', [
+                'health_check' => true,
+                'source'       => $this->config['source'] ?? 'health-checker',
+            ]);
+        } catch (\Exception $e) {
+            Log::warning('HEALTHCHECK: GraylogChecker have catch', ['error' => $e->getMessage()]);
+            $status = self::STATUS_FAIL;
+        }
+
+        return $status;
     }
 }

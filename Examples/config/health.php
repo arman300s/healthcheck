@@ -116,7 +116,8 @@ return [
 	// | 12. graylog                   - Graylog server check                                                          |
 	// |      (string) host            - Server host graylog                                                           |
 	// |      (string|null) port       - Connection port (Default: 12201)                                              |
-	// |      (bool) channel           - Log channel                                                                   |
+	// |      (bool) https             - Enable https protocol (Default: false)                                        |
+	// |      (string) channel         - Log channel                                                                   |
 	// |      (string) source          - Graylog source                                                                |
 	// |      (int) timeout            - Connection timeout (Default: 3)                                               |
 	// |---------------------------------------------------------------------------------------------------------------|
